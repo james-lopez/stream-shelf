@@ -87,7 +87,16 @@ it('returns to the last focused tile when re-entering a rail', () => {
   expect(focused()).toBe('b3');
 });
 
-it('returns from the sidebar to the last focused content tile', () => {
+it('enters the nearest rail at its own memory, not the last content tile (as on tvOS)', () => {
+  press('ArrowRight'); // a2: rail a remembers it
+  press('ArrowDown'); // b1
+  press('ArrowRight'); // b2: last content tile overall
+  el('Home').focus(); // sidebar item level with rail a
+  press('ArrowRight');
+  expect(focused()).toBe('a2');
+});
+
+it('returns from the sidebar to the rail tile it left', () => {
   press('ArrowRight'); // a2
   el('Home').focus();
   press('ArrowRight');

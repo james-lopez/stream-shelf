@@ -34,14 +34,15 @@ test('Home stays mounted across a section switch, keeping its focus memory', asy
   await page.evaluate(() => {
     document.getElementById('focus-guide-screen-home')!.dataset.marker = 'original';
   });
-  // Leave from Breaking Bad: a remounted Home would forget it and land on Under the Dome.
-  await press(page, 'ArrowDown');
+  // Trending remembers Person of Interest; a remounted Home would forget it and land on
+  // Under the Dome. Leave via Top Rated so the path to the sidebar doesn't pass tile 1.
+  await press(page, 'ArrowRight', 'ArrowDown');
   await expectFocus(page, 'Breaking Bad', 'rail-top-rated');
   await press(page, 'ArrowLeft', 'ArrowDown', 'Enter'); // sidebar → My List
   await onMyList(page);
-  await press(page, 'ArrowUp', 'Enter', 'ArrowRight'); // sidebar → Home, back into content
+  await press(page, 'ArrowUp', 'Enter', 'ArrowRight'); // sidebar Home → nearest rail (Trending)
 
-  await expectFocus(page, 'Breaking Bad', 'rail-top-rated');
+  await expectFocus(page, 'Person of Interest', 'rail-trending');
   const marker = await page.evaluate(() => document.getElementById('focus-guide-screen-home')?.dataset.marker);
   expect(marker).toBe('original');
 });

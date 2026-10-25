@@ -4,7 +4,8 @@
  *
  * - Arrow keys move DOM focus to the nearest focusable in that direction (see spatial.ts).
  * - FocusGuide regions mimic TVFocusGuideView autoFocus: entering one restores its
- *   last-focused child, or its first child on the first visit.
+ *   last-focused child, or its first child on the first visit. Behaviour was checked
+ *   against the tvOS 26 simulator.
  * - Components draw focus via their own onFocus/onBlur, so the browser ring is hidden.
  */
 import { findNext, type Direction } from './spatial';
@@ -124,9 +125,13 @@ function moveFocus(el: HTMLElement | undefined) {
   el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
 }
 
-/** If moving into a guide from outside, redirect to what that guide remembers. */
+/**
+ * If moving into a guide from outside, redirect to what that guide remembers. The
+ * innermost guide entered wins, as on tvOS: from the sidebar, focus enters the nearest
+ * rail at that rail's last tile, not wherever focus last was in the content area.
+ */
 function enterGuide(candidate: HTMLElement, current: HTMLElement, memory: Map<string, HTMLElement>) {
-  for (const guide of guidesOf(candidate)) {
+  for (const guide of guidesOf(candidate).reverse()) {
     if (guide.contains(current)) continue;
     const remembered = memory.get(guide.id);
     if (remembered && guide.contains(remembered) && isVisible(remembered)) return remembered;
