@@ -1,0 +1,12 @@
+{
+  "_comment": "SS ribbon logo. One stroke wound round four loops (r=94) joined by parallel 60deg runs; both ends overshoot and the evenodd clip squares them off horizontally (its outer box must contain both trim boxes). Used by src/components/Brand.tsx and scripts/export-icons.mjs.",
+  "viewBox": [225, 205, 975, 595],
+  "ribbon": "M279 480 L404 697 A94 94 0 0 0 566 603 L452 402 A94 94 0 0 1 614 308 L844 697 A94 94 0 0 0 1006 603 L889 402 A94 94 0 0 1 1051 308 L1174 520",
+  "clip": "M150 150 H1350 V850 H150 Z M200 400 H392 V565 H200 Z M1062 440 H1300 V580 H1062 Z",
+  "strokeWidth": 98,
+  "gradient": {
+    "from": [330, 230],
+    "to": [1080, 780],
+    "colors": ["#5ec4a0", "#4c6fa8", "#5b2db8"]
+  }
+}
