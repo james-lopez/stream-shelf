@@ -1,24 +1,18 @@
+import { makeTvMazeShow } from '../../../test/factories';
 import { createFixtureCatalog, createLiveCatalog, withSimulation } from '../service';
 import { stripHtml, toShow, type TvMazeShow } from '../tvmaze';
 import { CatalogError, type CatalogService } from '../types';
 
-const raw = (overrides: Partial<TvMazeShow> = {}): TvMazeShow => ({
-  id: 1,
-  name: 'Show',
-  language: 'English',
-  genres: ['Drama'],
-  status: 'Ended',
-  runtime: null,
-  averageRuntime: 45,
-  premiered: '2020-01-01',
-  rating: { average: 7.5 },
-  weight: 90,
-  network: null,
-  webChannel: { name: 'Netflix' },
-  image: null,
-  summary: '<p><b>Bold</b> &amp; plain</p>',
-  ...overrides,
-});
+const raw = (overrides: Partial<TvMazeShow> = {}) =>
+  makeTvMazeShow({
+    id: 1,
+    runtime: null,
+    averageRuntime: 45,
+    network: null,
+    webChannel: { name: 'Netflix' },
+    summary: '<p><b>Bold</b> &amp; plain</p>',
+    ...overrides,
+  });
 
 describe('toShow', () => {
   it('flattens TVMaze fields and strips summary HTML', () => {

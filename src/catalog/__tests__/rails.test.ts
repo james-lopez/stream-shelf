@@ -1,30 +1,15 @@
+import { makeShow } from '../../../test/factories';
 import { mostCommonGenre, RAILS, railTitle } from '../rails';
 import type { Show } from '../types';
-
-const show = (id: number, overrides: Partial<Show> = {}): Show => ({
-  id,
-  name: `Show ${id}`,
-  genres: [],
-  rating: null,
-  weight: 0,
-  premiered: null,
-  runtime: null,
-  language: null,
-  status: 'Running',
-  network: null,
-  summary: '',
-  image: null,
-  ...overrides,
-});
 
 const rail = (id: string) => RAILS.find((r) => r.id === id)!;
 const ids = (shows: Show[]) => shows.map((s) => s.id);
 
 const shows = [
-  show(1, { weight: 50, rating: 9, genres: ['Comedy'] }),
-  show(2, { weight: 99, rating: null, genres: ['Drama'] }),
-  show(3, { weight: 70, rating: 6, genres: ['Drama', 'Comedy'] }),
-  show(4, { weight: 10, rating: 8, genres: ['Drama'] }),
+  makeShow({ id: 1, weight: 50, rating: 9, genres: ['Comedy'] }),
+  makeShow({ id: 2, weight: 99, rating: null, genres: ['Drama'] }),
+  makeShow({ id: 3, weight: 70, rating: 6, genres: ['Drama', 'Comedy'] }),
+  makeShow({ id: 4, weight: 10, rating: 8, genres: ['Drama'] }),
 ];
 
 it('trending orders by weight', () => {
@@ -41,6 +26,15 @@ it('genre rail uses the most common genre for its title and contents', () => {
   expect(ids(rail('genre').select(shows))).toEqual([2, 3, 4]);
 });
 
+it('genre rail falls back to a generic title with no data', () => {
+  expect(railTitle(rail('genre'), [])).toBe('By Genre');
+});
+
 it('every rail is empty for an empty catalog', () => {
   for (const r of RAILS) expect(r.select([])).toEqual([]);
+});
+
+it('caps rails at 20 shows', () => {
+  const many = Array.from({ length: 30 }, (_, i) => makeShow({ weight: i, rating: i, genres: ['Drama'] }));
+  for (const r of RAILS) expect(r.select(many)).toHaveLength(20);
 });
