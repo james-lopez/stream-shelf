@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Show } from '../catalog/types';
 import { focusIfIdle } from '../focus/webFocus';
 import { colors, useLayout } from '../theme';
+import { Poster } from './Poster';
 
 type Props = {
   show: Show;
@@ -40,11 +41,7 @@ export function ShowTile({ show, onPress, hasTVPreferredFocus }: Props) {
           focused && layout.tenFoot && styles.lifted,
         ]}
       >
-        {show.image ? (
-          <Image source={{ uri: show.image.medium }} style={StyleSheet.absoluteFill} />
-        ) : (
-          <Text style={styles.fallback}>{show.name}</Text>
-        )}
+        <Poster show={show} />
       </View>
       <Text
         numberOfLines={1}
@@ -61,13 +58,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 3,
     borderColor: 'transparent',
-    backgroundColor: colors.surface,
     overflow: 'hidden',
-    justifyContent: 'center',
   },
   focused: { borderColor: colors.focus },
   lifted: { transform: [{ scale: 1.08 }] },
-  fallback: { color: colors.muted, textAlign: 'center', padding: 8 },
   name: { color: colors.muted, marginTop: 6 },
   nameFocused: { color: colors.text },
 });

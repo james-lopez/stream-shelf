@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Animated, FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { useCatalog } from '../catalog/CatalogContext';
 import { railTitle, type Rail } from '../catalog/rails';
 import type { Show } from '../catalog/types';
 import { useAsync } from '../hooks/useAsync';
+import { usePulse } from '../hooks/usePulse';
 import { colors, useLayout } from '../theme';
 import { FocusGuide } from './FocusGuide';
 import { ShowTile } from './ShowTile';
@@ -26,17 +27,13 @@ export function RailRow({ rail, onSelect, preferredFocus }: Props) {
   const { status, data, error, retry } = useAsync(() => catalog.getShows(), [catalog]);
 
   const items = useMemo(() => (data ? rail.select(data) : []), [data, rail]);
-  const title = data ? railTitle(rail, data) : typeof rail.title === 'string' ? rail.title : '';
+  // A data-derived title is unknown while loading; after a failure use the rail's own fallback.
+  const title =
+    status === 'loading' && typeof rail.title !== 'string' ? '' : railTitle(rail, data ?? []);
 
   let body;
   if (status === 'loading') {
-    body = (
-      <View style={[styles.row, { gap: layout.gap }]} accessibilityLabel={`Loading ${title || 'rail'}`}>
-        {Array.from({ length: SKELETON_COUNT }, (_, i) => (
-          <View key={i} style={[styles.skeleton, layout.tile]} />
-        ))}
-      </View>
-    );
+    body = <SkeletonRow label={`Loading ${title || 'rail'}`} />;
   } else if (status === 'error') {
     body = (
       <StateMessage
@@ -64,17 +61,47 @@ export function RailRow({ rail, onSelect, preferredFocus }: Props) {
 
   return (
     <View style={styles.rail}>
-      <Text
-        accessibilityRole="header"
-        style={[styles.title, { fontSize: layout.titleSize, paddingHorizontal: layout.gutter }]}
-      >
-        {title || ' '}
-      </Text>
+      {title ? (
+        <Text
+          accessibilityRole="header"
+          style={[styles.title, { fontSize: layout.titleSize, paddingHorizontal: layout.gutter }]}
+        >
+          {title}
+        </Text>
+      ) : (
+        // Data-derived titles (e.g. the genre rail) are unknown until shows arrive.
+        <SkeletonTitle />
+      )}
       {status === 'success' && items.length > 0 ? (
         <FocusGuide name={`rail-${rail.id}`}>{body}</FocusGuide>
       ) : (
         <View style={{ paddingHorizontal: layout.gutter }}>{body}</View>
       )}
+    </View>
+  );
+}
+
+function SkeletonRow({ label }: { label: string }) {
+  const layout = useLayout();
+  const opacity = usePulse();
+  return (
+    <View style={[styles.row, { gap: layout.gap }]} accessibilityLabel={label}>
+      {Array.from({ length: SKELETON_COUNT }, (_, i) => (
+        <Animated.View key={i} style={[styles.skeleton, layout.tile, { opacity }]} />
+      ))}
+    </View>
+  );
+}
+
+function SkeletonTitle() {
+  const layout = useLayout();
+  const opacity = usePulse();
+  return (
+    <View style={{ paddingHorizontal: layout.gutter }}>
+      <Animated.View
+        testID="rail-title-loading"
+        style={[styles.skeleton, { width: layout.titleSize * 6, height: layout.titleSize * 1.1, opacity }]}
+      />
     </View>
   );
 }

@@ -1,49 +1,44 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 
-import { CatalogContext } from '../../catalog/CatalogContext';
+import { deferred, fakeCatalog, renderWithCatalog } from '../../../test/catalog';
+import { makeShow } from '../../../test/factories';
 import type { Rail } from '../../catalog/rails';
-import { CatalogError, type CatalogService, type Show } from '../../catalog/types';
+import { CatalogError, type Show } from '../../catalog/types';
 import { RailRow } from '../RailRow';
 
-const show = (id: number, name: string): Show => ({
-  id,
-  name,
-  genres: [],
-  rating: null,
-  weight: 0,
-  premiered: null,
-  runtime: null,
-  language: null,
-  status: 'Running',
-  network: null,
-  summary: '',
-  image: null,
-});
-
 const everything: Rail = { id: 'all', title: 'Everything', select: (shows) => shows };
+const firefly = makeShow({ name: 'Firefly' });
 
-function renderRail(getShows: CatalogService['getShows'], rail = everything) {
-  const catalog: CatalogService = { getShows, getShow: jest.fn() };
-  return render(
-    <CatalogContext.Provider value={catalog}>
-      <RailRow rail={rail} onSelect={jest.fn()} />
-    </CatalogContext.Provider>,
-  );
-}
+const renderRail = (catalog: ReturnType<typeof fakeCatalog>, rail = everything) =>
+  renderWithCatalog(<RailRow rail={rail} onSelect={jest.fn()} />, catalog);
 
-it('shows a loading placeholder until shows arrive', async () => {
-  let resolve!: (shows: Show[]) => void;
-  await renderRail(() => new Promise((r) => (resolve = r)));
+it('shows skeleton tiles until shows arrive', async () => {
+  const shows = deferred<Show[]>();
+  await renderRail(fakeCatalog({ getShows: () => shows.promise }));
 
   expect(screen.getByLabelText('Loading Everything')).toBeTruthy();
 
-  await act(async () => resolve([show(1, 'Firefly')]));
+  await act(async () => shows.resolve([firefly]));
+
   expect(await screen.findByRole('button', { name: 'Firefly' })).toBeTruthy();
   expect(screen.queryByLabelText('Loading Everything')).toBeNull();
 });
 
+it('shows a title skeleton for data-derived titles, then the real title', async () => {
+  const shows = deferred<Show[]>();
+  const byFirstName: Rail = { id: 'dyn', title: (s) => (s[0] ? `More like ${s[0].name}` : 'Picks'), select: (s) => s };
+  await renderRail(fakeCatalog({ getShows: () => shows.promise }), byFirstName);
+
+  expect(screen.getByTestId('rail-title-loading')).toBeTruthy();
+
+  await act(async () => shows.resolve([firefly]));
+
+  expect(await screen.findByText('More like Firefly')).toBeTruthy();
+  expect(screen.queryByTestId('rail-title-loading')).toBeNull();
+});
+
 it('shows an empty state when the rail selects nothing', async () => {
-  await renderRail(async () => [show(1, 'Firefly')], { ...everything, select: () => [] });
+  await renderRail(fakeCatalog({ getShows: async () => [firefly] }), { ...everything, select: () => [] });
 
   expect(await screen.findByText('Nothing here yet.')).toBeTruthy();
 });
@@ -52,8 +47,8 @@ it('shows an error with a retry that refetches', async () => {
   const getShows = jest
     .fn<Promise<Show[]>, []>()
     .mockRejectedValueOnce(new CatalogError('Simulated failure', 'simulated'))
-    .mockResolvedValueOnce([show(1, 'Firefly')]);
-  await renderRail(getShows);
+    .mockResolvedValueOnce([firefly]);
+  await renderRail(fakeCatalog({ getShows }));
 
   expect(await screen.findByText("Couldn't load Everything.")).toBeTruthy();
   expect(screen.getByText('Simulated failure')).toBeTruthy();
@@ -62,4 +57,12 @@ it('shows an error with a retry that refetches', async () => {
 
   expect(await screen.findByRole('button', { name: 'Firefly' })).toBeTruthy();
   expect(getShows).toHaveBeenCalledTimes(2);
+});
+
+it('uses the fallback title when a data-derived rail fails', async () => {
+  const dynamic: Rail = { id: 'dyn', title: (s) => (s.length ? 'Drama' : 'By Genre'), select: (s) => s };
+  await renderRail(fakeCatalog({ getShows: async () => Promise.reject(new Error('offline')) }), dynamic);
+
+  expect(await screen.findByText("Couldn't load By Genre.")).toBeTruthy();
+  expect(screen.queryByTestId('rail-title-loading')).toBeNull();
 });
