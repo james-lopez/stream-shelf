@@ -64,7 +64,7 @@ npm run tvos
 npm run typecheck
 npm test                              # Jest + React Native Testing Library (62 tests)
 npx playwright install chromium       # once
-npm run test:e2e                      # Playwright, real arrow keys at 1920×1080 (16 tests)
+npm run test:e2e                      # Playwright, real arrow keys at 1920×1080 (21 tests)
 ```
 
 `test:e2e` starts its own dev server on port 8090 using fixtures, so it doesn't touch the network or a running dev server. The pre-push hook runs typecheck and Jest; e2e stays manual because it needs a browser.
@@ -105,7 +105,7 @@ npm run icons        # re-render app icons + favicon from assets/brand/mark.json
 
 **My List: zustand + `persist` on async-storage, over MMKV.** async-storage has a web backend (localStorage), so one store works everywhere. The list stores summary snapshots (id, name, image) rather than ids, so it renders instantly and offline. The detail screen still fetches fresh data. The toggle stays disabled until the store has loaded from storage, because a write before then would be overwritten.
 
-**React Navigation native stack**, which handles the TV back/menu button natively. Expo Router was ruled out because the TV plugin doesn't support it on tvOS.
+**React Navigation native stack**, which handles the TV back/menu button natively. Expo Router was ruled out because the TV plugin doesn't support it on tvOS. Sidebar sections behave like tabs over a Home root: switching section resets the stack to Home, or Home plus My List, and reuses existing routes so mounted screens keep their state. A plain `navigate` pushes a new copy in React Navigation 7 and would grow the Back history.
 
 **Focus: the platform engine on TV, and a documented simulation on web.**
 - **TV:** no custom spatial-navigation system. `Pressable` `onFocus`/`onBlur` drive a border and scale, `hasTVPreferredFocus` sets initial focus, and each rail sits in a `TVFocusGuideView autoFocus`, so moving vertically returns to that rail's last tile.

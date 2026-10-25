@@ -1,7 +1,10 @@
 import {
+  CommonActions,
   createNavigationContainerRef,
   DarkTheme,
   NavigationContainer,
+  type NavigationState,
+  type PartialState,
   type Theme,
 } from '@react-navigation/native';
 import { createNativeStackNavigator, type NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -61,7 +64,7 @@ function MyListRoute({ navigation }: ScreenProps<'MyList'>) {
     <Screen name="my-list">
       <MyListScreen
         onSelectShow={leaving((show: ShowSummary) => navigation.navigate('Detail', { id: show.id }))}
-        onBrowse={leaving(() => navigation.navigate('Home'))}
+        onBrowse={leaving(() => navigation.popToTop())}
       />
     </Screen>
   );
@@ -92,8 +95,23 @@ export function RootNavigator() {
     });
   }, []);
 
+  // Sections behave like tabs over a Home root: Home pops everything, My List sits directly
+  // above Home. Reusing the existing route objects keeps their keys, so mounted screens
+  // (and their scroll and focus memory) survive the switch. A plain `navigate` would push
+  // another copy each time in React Navigation 7 and grow the Back history.
   const navigate = (route: NavRoute) => {
-    if (navigationRef.isReady()) navigationRef.navigate(route);
+    const routes = navigationRef.isReady() ? navigationRef.getRootState()?.routes : undefined;
+    if (!routes) return;
+    // The key is what keeps a screen mounted; a route without one is created fresh.
+    const existing = (name: NavRoute) => {
+      const found = routes.find((r) => r.name === name);
+      return found ? { key: found.key, name } : { name };
+    };
+    const home = existing('Home');
+    const myList = existing('MyList');
+    const next: PartialState<NavigationState> =
+      route === 'Home' ? { index: 0, routes: [home] } : { index: 1, routes: [home, myList] };
+    navigationRef.dispatch(CommonActions.reset(next));
   };
   const nav = <NavBar orientation={SIDEBAR ? 'vertical' : 'horizontal'} current={section} onNavigate={navigate} />;
 
