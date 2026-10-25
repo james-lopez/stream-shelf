@@ -37,7 +37,7 @@ type ScreenProps<R extends keyof RootStackParamList> = NativeStackScreenProps<Ro
 /** Each screen is its own focus region, so web focus can tell which screen it is on. */
 function Screen({ name, children }: { name: string; children: ReactNode }) {
   return (
-    <FocusGuide name={`screen-${name}`} style={styles.fill}>
+    <FocusGuide name={`screen-${name}`} tvGuide={false} style={styles.fill}>
       {children}
     </FocusGuide>
   );
@@ -126,7 +126,7 @@ export function RootNavigator() {
     >
       <View style={[styles.fill, styles.shell, { flexDirection: SIDEBAR ? 'row' : 'column' }]}>
         {SIDEBAR ? nav : null}
-        <FocusGuide name="content" style={styles.fill}>
+        <FocusGuide name="content" tvGuide={false} style={styles.fill}>
           <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
             <Stack.Screen name="Home" component={HomeRoute} />
             <Stack.Screen name="MyList" component={MyListRoute} />

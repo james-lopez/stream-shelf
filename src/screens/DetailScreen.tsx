@@ -1,9 +1,11 @@
+import { useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useCatalog } from '../catalog/CatalogContext';
 import { CatalogError, type Show } from '../catalog/types';
 import { FocusButton } from '../components/FocusButton';
+import { FocusGuide, type FocusGuideHandle } from '../components/FocusGuide';
 import { CheckIcon, PlusIcon } from '../components/icons';
 import { Poster } from '../components/Poster';
 import { SkeletonBlock } from '../components/Skeleton';
@@ -64,15 +66,20 @@ export function DetailScreen({ id, onBack }: Props) {
 
 function DetailBody({ show, layout, poster }: { show: Show; layout: Layout; poster: Size }) {
   const meta = metadata(show);
+  const title = useRef<FocusGuideHandle>(null);
   return (
     <View style={[styles.body, layout.tenFoot ? styles.row : styles.column, { gap: layout.tenFoot ? 48 : 20 }]}>
       <View style={[styles.poster, poster]}>
         <Poster show={show} quality="original" />
       </View>
       <View style={[styles.info, layout.tenFoot && styles.infoWide]}>
-        <Text accessibilityRole="header" style={[styles.title, { fontSize: layout.brandSize * 1.1 }]}>
-          {show.name}
-        </Text>
+        {/* On TV the title row points at the My List button: it sits level with the sidebar,
+            where the poster and title would otherwise leave Right with nowhere to go. */}
+        <FocusGuide ref={title} name="detail-title">
+          <Text accessibilityRole="header" style={[styles.title, { fontSize: layout.brandSize * 1.1 }]}>
+            {show.name}
+          </Text>
+        </FocusGuide>
         {meta.length ? <Text style={[styles.meta, { fontSize: layout.bodySize }]}>{meta.join('  ·  ')}</Text> : null}
         {show.genres.length ? (
           <View style={styles.genres}>
@@ -83,7 +90,7 @@ function DetailBody({ show, layout, poster }: { show: Show; layout: Layout; post
             ))}
           </View>
         ) : null}
-        <MyListToggle show={show} />
+        <MyListToggle show={show} onFocused={(node) => title.current?.remember(node)} />
         <Text style={[styles.summary, { fontSize: layout.bodySize, lineHeight: layout.bodySize * 1.5 }]}>
           {show.summary || 'No description available.'}
         </Text>
@@ -92,7 +99,7 @@ function DetailBody({ show, layout, poster }: { show: Show; layout: Layout; post
   );
 }
 
-function MyListToggle({ show }: { show: Show }) {
+function MyListToggle({ show, onFocused }: { show: Show; onFocused: (node: View | null) => void }) {
   const inList = useIsInMyList(show.id);
   const hydrated = useMyListHydrated();
   const { add, remove } = useMyList.getState();
@@ -105,6 +112,7 @@ function MyListToggle({ show }: { show: Show }) {
       onPress={() => (inList ? remove(show.id) : add(show))}
       disabled={!hydrated}
       preferredFocus
+      onFocused={onFocused}
     />
   );
 }

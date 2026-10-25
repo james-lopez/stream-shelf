@@ -10,9 +10,11 @@ type Props = {
   show: ShowSummary;
   onPress: (show: ShowSummary) => void;
   hasTVPreferredFocus?: boolean;
+  /** Called with the tile's view when it gains focus, so its row can remember it. */
+  onFocused?: (node: View | null) => void;
 };
 
-export function ShowTile({ show, onPress, hasTVPreferredFocus }: Props) {
+export function ShowTile({ show, onPress, hasTVPreferredFocus, onFocused }: Props) {
   const [focused, setFocused] = useState(false);
   const layout = useLayout();
   const ref = useRef<View>(null);
@@ -26,7 +28,10 @@ export function ShowTile({ show, onPress, hasTVPreferredFocus }: Props) {
     <Pressable
       ref={ref}
       onPress={() => onPress(show)}
-      onFocus={() => setFocused(true)}
+      onFocus={() => {
+        setFocused(true);
+        onFocused?.(ref.current);
+      }}
       onBlur={() => setFocused(false)}
       hasTVPreferredFocus={hasTVPreferredFocus}
       accessibilityRole="button"

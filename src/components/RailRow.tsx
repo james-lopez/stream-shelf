@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { useCatalog } from '../catalog/CatalogContext';
@@ -6,7 +6,7 @@ import { railTitle, type Rail } from '../catalog/rails';
 import type { ShowSummary } from '../catalog/types';
 import { useAsync } from '../hooks/useAsync';
 import { colors, useLayout } from '../theme';
-import { FocusGuide } from './FocusGuide';
+import { FocusGuide, type FocusGuideHandle } from './FocusGuide';
 import { ShowTile } from './ShowTile';
 import { SkeletonBlock, SkeletonTiles } from './Skeleton';
 import { StateMessage } from './StateMessage';
@@ -16,13 +16,16 @@ type Props = {
   onSelect: (show: ShowSummary) => void;
   /** Give the first tile initial TV focus; only one rail on screen should set this. */
   preferredFocus?: boolean;
+  /** Called with each tile's view as it gains focus (the row also remembers it itself). */
+  onTileFocused?: (node: View | null) => void;
 };
 
 // Each rail fetches on its own so one failing rail doesn't blank the others.
-export function RailRow({ rail, onSelect, preferredFocus }: Props) {
+export function RailRow({ rail, onSelect, preferredFocus, onTileFocused }: Props) {
   const catalog = useCatalog();
   const layout = useLayout();
   const { status, data, error, retry } = useAsync(() => catalog.getShows(), [catalog]);
+  const guide = useRef<FocusGuideHandle>(null);
 
   const items = useMemo(() => (data ? rail.select(data) : []), [data, rail]);
   // A data-derived title is unknown while loading; after a failure use the rail's own fallback.
@@ -49,7 +52,15 @@ export function RailRow({ rail, onSelect, preferredFocus }: Props) {
         data={items}
         keyExtractor={(show) => String(show.id)}
         renderItem={({ item, index }) => (
-          <ShowTile show={item} onPress={onSelect} hasTVPreferredFocus={preferredFocus && index === 0} />
+          <ShowTile
+            show={item}
+            onPress={onSelect}
+            hasTVPreferredFocus={preferredFocus && index === 0}
+            onFocused={(node) => {
+              guide.current?.remember(node);
+              onTileFocused?.(node);
+            }}
+          />
         )}
         showsHorizontalScrollIndicator={!layout.tenFoot}
         contentContainerStyle={{ gap: layout.gap, paddingHorizontal: layout.gutter, paddingVertical: 12 }}
@@ -71,7 +82,9 @@ export function RailRow({ rail, onSelect, preferredFocus }: Props) {
         <SkeletonTitle />
       )}
       {status === 'success' && items.length > 0 ? (
-        <FocusGuide name={`rail-${rail.id}`}>{body}</FocusGuide>
+        <FocusGuide ref={guide} name={`rail-${rail.id}`}>
+          {body}
+        </FocusGuide>
       ) : (
         <View style={{ paddingHorizontal: layout.gutter }}>{body}</View>
       )}

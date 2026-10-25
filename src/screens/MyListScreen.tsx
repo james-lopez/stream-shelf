@@ -1,8 +1,9 @@
+import { useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ShowSummary } from '../catalog/types';
-import { FocusGuide } from '../components/FocusGuide';
+import { FocusGuide, type FocusGuideHandle } from '../components/FocusGuide';
 import { ShowTile } from '../components/ShowTile';
 import { SkeletonTiles } from '../components/Skeleton';
 import { StateMessage } from '../components/StateMessage';
@@ -19,6 +20,7 @@ export function MyListScreen({ onSelectShow, onBrowse }: Props) {
   const insets = useSafeAreaInsets();
   const hydrated = useMyListHydrated();
   const items = useMyList((state) => state.items);
+  const guide = useRef<FocusGuideHandle>(null);
 
   let body;
   if (!hydrated) {
@@ -35,9 +37,15 @@ export function MyListScreen({ onSelectShow, onBrowse }: Props) {
     // A wrapping grid rather than a virtualised list: lists stay small, and the TV focus
     // engine (and our web layer) navigate a plain 2D layout naturally.
     body = (
-      <FocusGuide name="my-list" style={[styles.grid, { gap: layout.gap }]}>
+      <FocusGuide ref={guide} name="my-list" style={[styles.grid, { gap: layout.gap }]}>
         {items.map((item, i) => (
-          <ShowTile key={item.id} show={item} onPress={onSelectShow} hasTVPreferredFocus={i === 0} />
+          <ShowTile
+            key={item.id}
+            show={item}
+            onPress={onSelectShow}
+            hasTVPreferredFocus={i === 0}
+            onFocused={(node) => guide.current?.remember(node)}
+          />
         ))}
       </FocusGuide>
     );

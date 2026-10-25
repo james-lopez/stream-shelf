@@ -12,10 +12,12 @@ type Props = {
   disabled?: boolean;
   /** Initial focus when the screen opens: hasTVPreferredFocus on TV, claimed on web. */
   preferredFocus?: boolean;
+  /** Called with the button's view when it gains focus. */
+  onFocused?: (node: View | null) => void;
 };
 
 /** Remote-friendly button: focus inverts it rather than relying on hover or press states. */
-export function FocusButton({ label, onPress, icon, variant = 'secondary', disabled, preferredFocus }: Props) {
+export function FocusButton({ label, onPress, icon, variant = 'secondary', disabled, preferredFocus, onFocused }: Props) {
   const [focused, setFocused] = useState(false);
   const layout = useLayout();
   const ref = useRef<View>(null);
@@ -30,7 +32,10 @@ export function FocusButton({ label, onPress, icon, variant = 'secondary', disab
     <Pressable
       ref={ref}
       onPress={onPress}
-      onFocus={() => setFocused(true)}
+      onFocus={() => {
+        setFocused(true);
+        onFocused?.(ref.current);
+      }}
       onBlur={() => setFocused(false)}
       disabled={disabled}
       hasTVPreferredFocus={preferredFocus}
