@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { LogBox, Platform } from 'react-native';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -10,6 +11,10 @@ import type { Show, ShowSummary } from '../catalog/types';
  * without refetching each show. Detail still fetches fresh data by id.
  */
 export type MyListItem = ShowSummary & { addedAt: number };
+
+// tvOS gives apps no guaranteed local storage, so async-storage warns on every launch.
+// The caveat is documented in the README; the dev banner it raises also steals remote focus.
+if (Platform.isTV) LogBox.ignoreLogs(['Persistent storage is not supported on tvOS']);
 
 type MyListState = {
   items: MyListItem[];
