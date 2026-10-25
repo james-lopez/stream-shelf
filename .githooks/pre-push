@@ -1,0 +1,6 @@
+#!/bin/sh
+# Fast gate before pushing: types and unit/render tests.
+# Playwright (`npm run test:e2e`) is left out because it boots a dev server and a browser.
+set -e
+npm run --silent typecheck
+npx jest --silent
