@@ -10,7 +10,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 
 import type { ShowSummary } from '../catalog/types';
 import { FocusGuide } from '../components/FocusGuide';
-import { installWebFocus } from '../focus/webFocus';
+import { installWebFocus, releaseFocus } from '../focus/webFocus';
 import { DetailScreen } from '../screens/DetailScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { MyListScreen } from '../screens/MyListScreen';
@@ -40,11 +40,18 @@ function Screen({ name, children }: { name: string; children: ReactNode }) {
   );
 }
 
+/** Navigation started from inside a screen: release focus first so the outgoing screen can be hidden. */
+const leaving =
+  <A extends unknown[]>(go: (...args: A) => void) =>
+  (...args: A) => {
+    releaseFocus();
+    go(...args);
+  };
+
 function HomeRoute({ navigation }: ScreenProps<'Home'>) {
-  const open = (show: ShowSummary) => navigation.navigate('Detail', { id: show.id });
   return (
     <Screen name="home">
-      <HomeScreen onSelectShow={open} />
+      <HomeScreen onSelectShow={leaving((show: ShowSummary) => navigation.navigate('Detail', { id: show.id }))} />
     </Screen>
   );
 }
@@ -53,8 +60,8 @@ function MyListRoute({ navigation }: ScreenProps<'MyList'>) {
   return (
     <Screen name="my-list">
       <MyListScreen
-        onSelectShow={(show) => navigation.navigate('Detail', { id: show.id })}
-        onBrowse={() => navigation.navigate('Home')}
+        onSelectShow={leaving((show: ShowSummary) => navigation.navigate('Detail', { id: show.id }))}
+        onBrowse={leaving(() => navigation.navigate('Home'))}
       />
     </Screen>
   );
@@ -63,7 +70,7 @@ function MyListRoute({ navigation }: ScreenProps<'MyList'>) {
 function DetailRoute({ navigation, route }: ScreenProps<'Detail'>) {
   return (
     <Screen name="detail">
-      <DetailScreen id={route.params.id} onBack={() => navigation.goBack()} />
+      <DetailScreen id={route.params.id} onBack={leaving(() => navigation.goBack())} />
     </Screen>
   );
 }
@@ -76,7 +83,13 @@ export function RootNavigator() {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    return installWebFocus({ onBack: () => navigationRef.canGoBack() && navigationRef.goBack() });
+    return installWebFocus({
+      onBack: () => {
+        if (!navigationRef.canGoBack()) return;
+        releaseFocus();
+        navigationRef.goBack();
+      },
+    });
   }, []);
 
   const navigate = (route: NavRoute) => {

@@ -97,6 +97,19 @@ export function takePreferredFocus(el: unknown) {
   if (isIdle(active) || elsewhere) el.focus({ preventScroll: true }); // keep the brand in view on first load
 }
 
+/**
+ * Drop focus before leaving a screen. The navigator hides the outgoing screen with
+ * aria-hidden in the same render that mounts the next one; if a tile inside it still had
+ * focus, browsers block that (assistive tech would be focused on hidden content). With
+ * focus released, the next screen's preferred focus or Back's restore picks it up.
+ * No-op off web.
+ */
+export function releaseFocus() {
+  if (typeof document === 'undefined') return;
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) active.blur();
+}
+
 function isIdle(el: Element | null): boolean {
   return !(el instanceof HTMLElement) || el === document.body || !el.isConnected || !isVisible(el);
 }

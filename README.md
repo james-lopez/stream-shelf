@@ -64,7 +64,7 @@ npm run tvos
 npm run typecheck
 npm test                              # Jest + React Native Testing Library (62 tests)
 npx playwright install chromium       # once
-npm run test:e2e                      # Playwright, real arrow keys at 1920×1080 (15 tests)
+npm run test:e2e                      # Playwright, real arrow keys at 1920×1080 (16 tests)
 ```
 
 `test:e2e` starts its own dev server on port 8090 using fixtures, so it doesn't touch the network or a running dev server. The pre-push hook runs typecheck and Jest; e2e stays manual because it needs a browser.
