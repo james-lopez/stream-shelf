@@ -6,9 +6,7 @@ import { LogoMark } from '../components/Brand';
 import { FocusGuide } from '../components/FocusGuide';
 import { HomeIcon, MyListIcon } from '../components/icons';
 import { colors, useLayout } from '../theme';
-import type { RootStackParamList } from './types';
-
-export type NavRoute = keyof RootStackParamList;
+import type { NavRoute } from './types';
 
 const ITEMS: { route: NavRoute; label: string; Icon: ComponentType<{ size: number; color: string }> }[] = [
   { route: 'Home', label: 'Home', Icon: HomeIcon },

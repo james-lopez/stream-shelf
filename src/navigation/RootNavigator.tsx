@@ -4,17 +4,19 @@ import {
   NavigationContainer,
   type Theme,
 } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useEffect, useState } from 'react';
+import { createNativeStackNavigator, type NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
+import type { ShowSummary } from '../catalog/types';
 import { FocusGuide } from '../components/FocusGuide';
 import { installWebFocus } from '../focus/webFocus';
+import { DetailScreen } from '../screens/DetailScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { MyListScreen } from '../screens/MyListScreen';
 import { colors } from '../theme';
-import { NavBar, type NavRoute } from './NavBar';
-import type { RootStackParamList } from './types';
+import { NavBar } from './NavBar';
+import type { NavRoute, RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -27,13 +29,50 @@ const theme: Theme = {
 // Web and TV are driven by directional input, where a left rail is the convention.
 const SIDEBAR = Platform.isTV || Platform.OS === 'web';
 
-function HomeRoute() {
-  // Detail screen lands next; selection is a no-op until then.
-  return <HomeScreen onSelectShow={() => {}} />;
+type ScreenProps<R extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, R>;
+
+/** Each screen is its own focus region, so web focus can tell which screen it is on. */
+function Screen({ name, children }: { name: string; children: ReactNode }) {
+  return (
+    <FocusGuide name={`screen-${name}`} style={styles.fill}>
+      {children}
+    </FocusGuide>
+  );
 }
 
+function HomeRoute({ navigation }: ScreenProps<'Home'>) {
+  const open = (show: ShowSummary) => navigation.navigate('Detail', { id: show.id });
+  return (
+    <Screen name="home">
+      <HomeScreen onSelectShow={open} />
+    </Screen>
+  );
+}
+
+function MyListRoute({ navigation }: ScreenProps<'MyList'>) {
+  return (
+    <Screen name="my-list">
+      <MyListScreen
+        onSelectShow={(show) => navigation.navigate('Detail', { id: show.id })}
+        onBrowse={() => navigation.navigate('Home')}
+      />
+    </Screen>
+  );
+}
+
+function DetailRoute({ navigation, route }: ScreenProps<'Detail'>) {
+  return (
+    <Screen name="detail">
+      <DetailScreen id={route.params.id} onBack={() => navigation.goBack()} />
+    </Screen>
+  );
+}
+
+const isNavRoute = (name: string | undefined): name is NavRoute => name === 'Home' || name === 'MyList';
+
 export function RootNavigator() {
-  const [current, setCurrent] = useState<string>('Home');
+  // The nav highlights the section you're in, which stays put while viewing a detail page.
+  const [section, setSection] = useState<NavRoute>('Home');
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -43,20 +82,29 @@ export function RootNavigator() {
   const navigate = (route: NavRoute) => {
     if (navigationRef.isReady()) navigationRef.navigate(route);
   };
-  const nav = <NavBar orientation={SIDEBAR ? 'vertical' : 'horizontal'} current={current} onNavigate={navigate} />;
+  const nav = <NavBar orientation={SIDEBAR ? 'vertical' : 'horizontal'} current={section} onNavigate={navigate} />;
 
   return (
     <NavigationContainer
       ref={navigationRef}
       theme={theme}
-      onStateChange={() => setCurrent(navigationRef.getCurrentRoute()?.name ?? 'Home')}
+      onStateChange={() => {
+        const name = navigationRef.getCurrentRoute()?.name;
+        if (isNavRoute(name)) setSection(name);
+      }}
     >
-      <View style={[styles.shell, { flexDirection: SIDEBAR ? 'row' : 'column' }]}>
+      <View style={[styles.fill, styles.shell, { flexDirection: SIDEBAR ? 'row' : 'column' }]}>
         {SIDEBAR ? nav : null}
-        <FocusGuide name="content" style={styles.content}>
+        <FocusGuide name="content" style={styles.fill}>
           <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
             <Stack.Screen name="Home" component={HomeRoute} />
-            <Stack.Screen name="MyList" component={MyListScreen} />
+            <Stack.Screen name="MyList" component={MyListRoute} />
+            <Stack.Screen
+              name="Detail"
+              component={DetailRoute}
+              // Phones get a native back button; TV uses the remote's back/menu, web uses Escape.
+              options={{ headerShown: !SIDEBAR, headerTransparent: true, title: '', headerTintColor: colors.text }}
+            />
           </Stack.Navigator>
         </FocusGuide>
         {SIDEBAR ? null : nav}
@@ -66,6 +114,6 @@ export function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: colors.background },
-  content: { flex: 1 },
+  fill: { flex: 1 },
+  shell: { backgroundColor: colors.background },
 });
