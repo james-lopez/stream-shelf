@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
-import type { Show } from '../catalog/types';
+import type { ShowSummary } from '../catalog/types';
 import { USE_NATIVE_DRIVER, usePulse } from '../hooks/usePulse';
 import { colors } from '../theme';
 import { LogoMark } from './Brand';
@@ -12,7 +12,7 @@ type Status = 'loading' | 'loaded' | 'failed';
  * Show artwork with explicit states: a pulsing placeholder while the image loads, a
  * branded fallback with the title when there's no image or it fails, and a fade-in once ready.
  */
-export function Poster({ show }: { show: Show }) {
+export function Poster({ show, quality = 'medium' }: { show: ShowSummary; quality?: 'medium' | 'original' }) {
   const [status, setStatus] = useState<Status>(show.image ? 'loading' : 'failed');
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -28,7 +28,7 @@ export function Poster({ show }: { show: Show }) {
       {show.image && status !== 'failed' ? (
         <Animated.Image
           testID="poster-image"
-          source={{ uri: show.image.medium }}
+          source={{ uri: show.image[quality] }}
           onLoad={onLoad}
           onError={() => setStatus('failed')}
           style={[StyleSheet.absoluteFill, { opacity }]}

@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { Show } from '../catalog/types';
-import { focusIfIdle } from '../focus/webFocus';
+import type { ShowSummary } from '../catalog/types';
+import { takePreferredFocus } from '../focus/webFocus';
 import { colors, useLayout } from '../theme';
 import { Poster } from './Poster';
 
 type Props = {
-  show: Show;
-  onPress: (show: Show) => void;
+  show: ShowSummary;
+  onPress: (show: ShowSummary) => void;
   hasTVPreferredFocus?: boolean;
 };
 
@@ -19,7 +19,7 @@ export function ShowTile({ show, onPress, hasTVPreferredFocus }: Props) {
 
   // hasTVPreferredFocus is a no-op on web, so claim initial focus ourselves.
   useEffect(() => {
-    if (Platform.OS === 'web' && hasTVPreferredFocus) focusIfIdle(ref.current);
+    if (Platform.OS === 'web' && hasTVPreferredFocus) takePreferredFocus(ref.current);
   }, [hasTVPreferredFocus]);
 
   return (

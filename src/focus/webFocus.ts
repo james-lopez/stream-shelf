@@ -20,8 +20,15 @@ const KEYS: Record<string, Direction> = {
 const FOCUSABLE = '[tabindex="0"]';
 const GUIDE = `[id^="${FOCUS_GUIDE_PREFIX}"]`;
 
+const HISTORY_SIZE = 20;
+const RESTORE_ATTEMPTS = 20;
+const RESTORE_INTERVAL_MS = 50;
+
 export function installWebFocus({ onBack }: { onBack: () => void }): () => void {
   const memory = new Map<string, HTMLElement>();
+  // Recent focus, newest last, so Back can return to where the user came from.
+  const history: HTMLElement[] = [];
+  let restoreTimer: ReturnType<typeof setTimeout> | undefined;
 
   const style = document.createElement('style');
   style.textContent = `${FOCUSABLE}:focus { outline: none; }`;
@@ -30,17 +37,32 @@ export function installWebFocus({ onBack }: { onBack: () => void }): () => void 
   const onFocusIn = (event: FocusEvent) => {
     const target = event.target as HTMLElement;
     for (const guide of guidesOf(target)) memory.set(guide.id, target);
+    history.push(target);
+    if (history.length > HISTORY_SIZE) history.shift();
+  };
+
+  // The previous screen becomes visible over a short transition, so retry for a moment.
+  const restoreAfterBack = (attempt = 0) => {
+    if (!isIdle(document.activeElement)) return;
+    const previous = [...history].reverse().find((el) => el.isConnected && isVisible(el));
+    if (previous) return moveFocus(previous);
+    if (attempt < RESTORE_ATTEMPTS) restoreTimer = setTimeout(() => restoreAfterBack(attempt + 1), RESTORE_INTERVAL_MS);
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') return onBack();
+    if (event.key === 'Escape') {
+      onBack();
+      restoreTimer = setTimeout(restoreAfterBack, RESTORE_INTERVAL_MS);
+      return;
+    }
     const direction = KEYS[event.key];
     if (!direction) return;
     event.preventDefault(); // arrows would otherwise scroll the page
 
     const current = document.activeElement;
-    if (!(current instanceof HTMLElement) || current === document.body) {
-      const fallback = memory.get(`${FOCUS_GUIDE_PREFIX}content`) ?? visibleFocusables(document)[0];
+    if (!(current instanceof HTMLElement) || isIdle(current)) {
+      const remembered = memory.get(`${FOCUS_GUIDE_PREFIX}content`);
+      const fallback = remembered && isVisible(remembered) ? remembered : visibleFocusables(document)[0];
       return moveFocus(fallback);
     }
 
@@ -56,17 +78,31 @@ export function installWebFocus({ onBack }: { onBack: () => void }): () => void 
   document.addEventListener('focusin', onFocusIn);
   document.addEventListener('keydown', onKeyDown);
   return () => {
+    clearTimeout(restoreTimer);
     document.removeEventListener('focusin', onFocusIn);
     document.removeEventListener('keydown', onKeyDown);
     style.remove();
   };
 }
 
-/** Web stand-in for hasTVPreferredFocus: take focus only if nothing else has it. */
-export function focusIfIdle(el: unknown) {
-  if (el instanceof HTMLElement && (!document.activeElement || document.activeElement === document.body)) {
-    el.focus({ preventScroll: true }); // keep the brand in view on first load
-  }
+/**
+ * Web stand-in for hasTVPreferredFocus. Takes focus when nothing usable has it, or when
+ * focus was left on another screen (e.g. the tile that opened this one). It never steals
+ * focus from the same screen or from the sidebar.
+ */
+export function takePreferredFocus(el: unknown) {
+  if (!(el instanceof HTMLElement)) return;
+  const active = document.activeElement;
+  const elsewhere = active instanceof HTMLElement && screenOf(active) !== null && screenOf(active) !== screenOf(el);
+  if (isIdle(active) || elsewhere) el.focus({ preventScroll: true }); // keep the brand in view on first load
+}
+
+function isIdle(el: Element | null): boolean {
+  return !(el instanceof HTMLElement) || el === document.body || !el.isConnected || !isVisible(el);
+}
+
+function screenOf(el: HTMLElement): HTMLElement | null {
+  return el.closest<HTMLElement>(`[id^="${FOCUS_GUIDE_PREFIX}screen-"]`);
 }
 
 function moveFocus(el: HTMLElement | undefined) {

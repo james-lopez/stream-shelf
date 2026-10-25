@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-import { focusIfIdle, installWebFocus } from '../webFocus';
+import { installWebFocus, takePreferredFocus } from '../webFocus';
 
 // jsdom has no layout, so each focusable gets a fixed rect. The page mirrors Home:
 // a sidebar guide, and a content guide holding two rails of three tiles.
@@ -113,12 +113,61 @@ it('recovers focus into content when nothing is focused', () => {
   expect(focused()).toBe('a2');
 });
 
-it('focusIfIdle only claims focus when nothing else has it', () => {
-  focusIfIdle(el('b2'));
-  expect(focused()).toBe('a1');
-  (document.activeElement as HTMLElement).blur();
-  focusIfIdle(el('b2'));
-  expect(focused()).toBe('b2');
+describe('takePreferredFocus', () => {
+  // Wrap the rails in a "home" screen and add a "detail" screen beside them.
+  beforeEach(() => {
+    // Move (not re-create) the rails so their stubbed rects survive.
+    const content = document.getElementById('focus-guide-content')!;
+    const home = document.createElement('div');
+    home.id = 'focus-guide-screen-home';
+    home.append(...content.children);
+    content.append(home);
+    content.insertAdjacentHTML(
+      'beforeend',
+      '<div id="focus-guide-screen-detail"><div tabindex="0" aria-label="Add to My List"></div></div>',
+    );
+    el('a1').focus();
+  });
+
+  it('takes focus when nothing has it', () => {
+    (document.activeElement as HTMLElement).blur();
+    takePreferredFocus(el('b2'));
+    expect(focused()).toBe('b2');
+  });
+
+  it('does not steal focus within the same screen', () => {
+    takePreferredFocus(el('b2'));
+    expect(focused()).toBe('a1');
+  });
+
+  it('takes focus from a tile left behind on the previous screen', () => {
+    takePreferredFocus(el('Add to My List'));
+    expect(focused()).toBe('Add to My List');
+  });
+
+  it('never steals focus from the sidebar', () => {
+    el('My List').focus();
+    takePreferredFocus(el('Add to My List'));
+    expect(focused()).toBe('My List');
+  });
+});
+
+it('restores focus to the previous element after Back', () => {
+  jest.useFakeTimers();
+  press('ArrowRight'); // a2
+  const detail = document.createElement('div');
+  detail.tabIndex = 0;
+  detail.getBoundingClientRect = () => ({ left: 0, top: 0, right: 10, bottom: 10, width: 10, height: 10 }) as DOMRect;
+  document.body.appendChild(detail);
+  detail.focus();
+
+  press('Escape'); // the app pops the screen, removing its focused element
+  detail.remove();
+  jest.advanceTimersByTime(100);
+
+  expect(onBack).toHaveBeenCalled();
+  expect(focused()).toBe('a2');
+  jest.useRealTimers();
 });
 
 it('removes its listeners and focus-ring style on uninstall', () => {

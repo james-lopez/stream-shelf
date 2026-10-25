@@ -1,24 +1,22 @@
 import { useMemo } from 'react';
-import { Animated, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { useCatalog } from '../catalog/CatalogContext';
 import { railTitle, type Rail } from '../catalog/rails';
-import type { Show } from '../catalog/types';
+import type { ShowSummary } from '../catalog/types';
 import { useAsync } from '../hooks/useAsync';
-import { usePulse } from '../hooks/usePulse';
 import { colors, useLayout } from '../theme';
 import { FocusGuide } from './FocusGuide';
 import { ShowTile } from './ShowTile';
+import { SkeletonBlock, SkeletonTiles } from './Skeleton';
 import { StateMessage } from './StateMessage';
 
 type Props = {
   rail: Rail;
-  onSelect: (show: Show) => void;
+  onSelect: (show: ShowSummary) => void;
   /** Give the first tile initial TV focus; only one rail on screen should set this. */
   preferredFocus?: boolean;
 };
-
-const SKELETON_COUNT = 6;
 
 // Each rail fetches on its own so one failing rail doesn't blank the others.
 export function RailRow({ rail, onSelect, preferredFocus }: Props) {
@@ -33,7 +31,7 @@ export function RailRow({ rail, onSelect, preferredFocus }: Props) {
 
   let body;
   if (status === 'loading') {
-    body = <SkeletonRow label={`Loading ${title || 'rail'}`} />;
+    body = <SkeletonTiles label={`Loading ${title || 'rail'}`} />;
   } else if (status === 'error') {
     body = (
       <StateMessage
@@ -81,26 +79,13 @@ export function RailRow({ rail, onSelect, preferredFocus }: Props) {
   );
 }
 
-function SkeletonRow({ label }: { label: string }) {
-  const layout = useLayout();
-  const opacity = usePulse();
-  return (
-    <View style={[styles.row, { gap: layout.gap }]} accessibilityLabel={label}>
-      {Array.from({ length: SKELETON_COUNT }, (_, i) => (
-        <Animated.View key={i} style={[styles.skeleton, layout.tile, { opacity }]} />
-      ))}
-    </View>
-  );
-}
-
 function SkeletonTitle() {
   const layout = useLayout();
-  const opacity = usePulse();
   return (
     <View style={{ paddingHorizontal: layout.gutter }}>
-      <Animated.View
+      <SkeletonBlock
         testID="rail-title-loading"
-        style={[styles.skeleton, { width: layout.titleSize * 6, height: layout.titleSize * 1.1, opacity }]}
+        style={{ width: layout.titleSize * 6, height: layout.titleSize * 1.1 }}
       />
     </View>
   );
@@ -109,6 +94,4 @@ function SkeletonTitle() {
 const styles = StyleSheet.create({
   rail: { marginBottom: 16 },
   title: { color: colors.text, fontWeight: '600' },
-  row: { flexDirection: 'row', paddingVertical: 12, overflow: 'hidden' },
-  skeleton: { borderRadius: 8, backgroundColor: colors.surface },
 });

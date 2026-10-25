@@ -1,35 +1,30 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, useLayout } from '../theme';
+import { FocusButton } from './FocusButton';
 
 type Props = {
   message: string;
   detail?: string;
-  action?: { label: string; onPress: () => void };
+  action?: { label: string; onPress: () => void; preferredFocus?: boolean };
+  align?: 'start' | 'center';
 };
 
 /** Shared empty/error body. The action is a focusable button so it works with a remote. */
-export function StateMessage({ message, detail, action }: Props) {
+export function StateMessage({ message, detail, action, align = 'start' }: Props) {
   const layout = useLayout();
-  const [focused, setFocused] = useState(false);
+  const center = align === 'center';
 
   return (
-    <View style={styles.container}>
-      <Text style={[styles.message, { fontSize: layout.bodySize }]}>{message}</Text>
-      {detail ? <Text style={[styles.detail, { fontSize: layout.bodySize * 0.8 }]}>{detail}</Text> : null}
+    <View style={[styles.container, center && styles.centered]}>
+      <Text style={[styles.message, { fontSize: layout.bodySize }, center && styles.centerText]}>{message}</Text>
+      {detail ? (
+        <Text style={[styles.detail, { fontSize: layout.bodySize * 0.8 }, center && styles.centerText]}>{detail}</Text>
+      ) : null}
       {action ? (
-        <Pressable
-          onPress={action.onPress}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          accessibilityRole="button"
-          style={[styles.button, focused && styles.buttonFocused]}
-        >
-          <Text style={[styles.buttonText, { fontSize: layout.bodySize }, focused && styles.buttonTextFocused]}>
-            {action.label}
-          </Text>
-        </Pressable>
+        <View style={styles.action}>
+          <FocusButton label={action.label} onPress={action.onPress} preferredFocus={action.preferredFocus} />
+        </View>
       ) : null}
     </View>
   );
@@ -37,17 +32,9 @@ export function StateMessage({ message, detail, action }: Props) {
 
 const styles = StyleSheet.create({
   container: { alignItems: 'flex-start', gap: 8, paddingVertical: 12 },
+  centered: { alignItems: 'center' },
   message: { color: colors.text },
   detail: { color: colors.muted },
-  button: {
-    marginTop: 4,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: colors.muted,
-  },
-  buttonFocused: { borderColor: colors.focus, backgroundColor: colors.focus },
-  buttonText: { color: colors.text },
-  buttonTextFocused: { color: colors.background },
+  centerText: { textAlign: 'center' },
+  action: { marginTop: 4 },
 });

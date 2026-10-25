@@ -2,13 +2,13 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RAILS } from '../catalog/rails';
-import type { Show } from '../catalog/types';
+import type { ShowSummary } from '../catalog/types';
 import { Brand } from '../components/Brand';
 import { RailRow } from '../components/RailRow';
 import { colors, useLayout } from '../theme';
 
 type Props = {
-  onSelectShow: (show: Show) => void;
+  onSelectShow: (show: ShowSummary) => void;
 };
 
 export function HomeScreen({ onSelectShow }: Props) {

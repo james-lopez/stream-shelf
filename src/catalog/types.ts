@@ -14,6 +14,9 @@ export type Show = {
   image: { medium: string; original: string } | null;
 };
 
+/** Enough to draw a tile; what My List persists. */
+export type ShowSummary = Pick<Show, 'id' | 'name' | 'image'>;
+
 export interface CatalogService {
   getShows(): Promise<Show[]>;
   getShow(id: number): Promise<Show>;
